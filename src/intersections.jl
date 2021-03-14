@@ -291,3 +291,15 @@ function closest_intersection(scene::Scene, ray::Ray, ignore::Int=0)
     return closest_intersection_value, closest_index, side
 
 end
+
+function coords_to_lat_lng(sphere::Sphere, intersection_point::Vector_3D)
+    
+    point_translated_scaled = (intersection_point - sphere.centre) / sphere.radius
+    ϕ = atan( point_translated_scaled.z, point_translated_scaled.x )
+    θ = asin( point_translated_scaled.y )
+    lat = 1 - (ϕ + π) / (2π)
+    lng = ( θ + π/2 ) / π
+
+    return (lat, lng)
+
+end

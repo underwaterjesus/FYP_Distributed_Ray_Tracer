@@ -246,7 +246,13 @@ function colour_pixel(scene::Scene, ray::Ray, closest_intersection_value::Real, 
 
     light_side_n = dot(n, -light_ray) < 0 ? n : -n
     epsilon_point = idx > 0 ? intersect_point + ( light_side_n * (10 * EPSILON) ) : intersect_point
-    base_colour = idx > 0 ? scene.light.brightness * scene.shapes[idx].colour : scene.light.brightness * boundary_colour(intersect_point)
+    
+    if side_id == nothing && scene.shapes[idx].texture != nothing
+        base_colour = idx > 0 ? scene.light.brightness * texture_colour(scene.shapes[idx], intersect_point) : scene.light.brightness * boundary_colour(intersect_point)
+    else
+        base_colour = idx > 0 ? scene.light.brightness * scene.shapes[idx].colour : scene.light.brightness * boundary_colour(intersect_point)
+    end
+
     ambient_colour = base_colour * scene.light.ambient
     reflect_colour = BLACK
     reflection = side == nothing ? scene.shapes[idx].reflection : side.reflection
@@ -304,4 +310,20 @@ function background_colour(point::Vector_3D)
     b2 = t*1.0
 
     return RGBA( r+r2, g+g2, b+b2, 1 )
+end
+
+function texture_colour(sphere::Sphere, intersection_point::Vector_3D)
+    
+    if sphere.texture == nothing
+        return TRANSPARENT
+    end
+
+    lat, lng = coords_to_lat_lng(sphere, intersection_point)
+    width_idx = floor( Int, min( (width(sphere.texture) * lat), width(sphere.texture) ) )
+    height_idx = floor( Int, min( (height(sphere.texture) * lng), height(sphere.texture) ) )
+    width_idx = max(width_idx, 1)
+    height_idx = max(height_idx, 1)
+
+    return sphere.texture.map[ (height(sphere.texture) + 1) - height_idx , width_idx ]
+
 end
