@@ -62,6 +62,9 @@ struct Sphere <: Shape
     reflection::Float64
     transparency::Float64
     refraction::Float64
+    x_rot::Float64
+    y_rot::Float64
+    z_rot::Float64
     texture::Union{Texture, Nothing}
 
 end
@@ -75,6 +78,7 @@ struct Plane <: Shape
     reflection::Float64
     transparency::Float64
     refraction::Float64
+    texture::Union{Texture, Nothing}
 
 end
 
@@ -91,6 +95,7 @@ struct Cuboid <: Shape
     diffuse::Float32
     specular::Float32
     shine::Float32
+    has_texture::Bool
 
 end
 
@@ -156,14 +161,15 @@ function make_scene( len::Real=0, width::Real=0, height::Real=0 ;
 
 end
 
-function make_cuboid( centre::Vector_3D, len::Real, width::Real, height::Real ;
+function make_cuboid( centre::Vector_3D, len::Real, wdh::Real, hgt::Real ;
     x_rot::Real=0, y_rot::Real=0, z_rot::Real=0, colour::RGBA=GREEN,
     diffuse::Real=0.5, specular::Real=0, shine::Real=500, transparency::Real=0, refraction::Real=0,
-    reflection::Real=0, sides::Union{ Int, Tuple{Int, Vararg{Int}} }=( LEFT, RIGHT, FRONT, BACK, TOP, BOTTOM ) )
+    reflection::Real=0, sides::Union{ Int, Tuple{Int, Vararg{Int}} }=( LEFT, RIGHT, FRONT, BACK, TOP, BOTTOM ),
+    texture::Union{Texture, Nothing}=nothing, map_mode::Int=TILE )
 
     if len <= 0 throw( DomainError(len, "argument \"len\" must be greater than zero") ) end
-    if width <= 0 throw( DomainError(width, "argument \"width\" must be greater than zero") ) end
-    if height <= 0 throw( DomainError(height, "argument \"height\" must be greater than zero") ) end
+    if wdh <= 0 throw( DomainError(wdh, "argument \"wdh\" must be greater than zero") ) end
+    if hgt <= 0 throw( DomainError(hgt, "argument \"hgt\" must be greater than zero") ) end
     if refraction < 0 throw( DomainError(refraction, "argument \"refraction\" must be nonnegative") ) end
     if shine < 0 throw( DomainError(shine, "argument \"shine\" must be nonnegative") ) end
     if specular < 0 || specular > 1 throw( DomainError(specular, "argument \"specular\" must be between 0 and 1 inclusive") ) end
@@ -171,15 +177,15 @@ function make_cuboid( centre::Vector_3D, len::Real, width::Real, height::Real ;
     if reflection < 0 || reflection > 1 throw( DomainError(reflection, "argument \"reflection\" must be between 0 and 1 inclusive") ) end
     if transparency < 0 || transparency > 1 throw( DomainError(transparency, "argument \"transparency\" must be between 0 and 1 inclusive") ) end
 
-    a = Vector_3D( -width/2, height/2, len/2 )
-    b = Vector_3D( width/2, height/2, len/2 )
-    c = Vector_3D( -width/2, height/2, -len/2 )
-    d = Vector_3D( width/2, height/2, -len/2 )
+    a = Vector_3D( -wdh/2, hgt/2, len/2 )
+    b = Vector_3D( wdh/2, hgt/2, len/2 )
+    c = Vector_3D( -wdh/2, hgt/2, -len/2 )
+    d = Vector_3D( wdh/2, hgt/2, -len/2 )
 
-    w_ = Vector_3D( -width/2, -height/2, len/2 )
-    x = Vector_3D( width/2, -height/2, len/2 )
-    y = Vector_3D( -width/2, -height/2, -len/2 )
-    z = Vector_3D( width/2, -height/2, -len/2 )
+    w_ = Vector_3D( -wdh/2, -hgt/2, len/2 )
+    x = Vector_3D( wdh/2, -hgt/2, len/2 )
+    y = Vector_3D( -wdh/2, -hgt/2, -len/2 )
+    z = Vector_3D( wdh/2, -hgt/2, -len/2 )
 
     if abs(x_rot) > 0
         a = rotate_on_axis(a, x_rot, X_AXIS)
@@ -228,34 +234,85 @@ function make_cuboid( centre::Vector_3D, len::Real, width::Real, height::Real ;
         end
     end
 
-    left = Plane( c, y, a, w_, reflection_values[LEFT], transparency, refraction )
-    right = Plane( b, x, d, z, reflection_values[RIGHT], transparency, refraction )
-    front = Plane( a, w_, b, x, reflection_values[FRONT], transparency, refraction )
-    back = Plane( c, y, d, z, reflection_values[BACK], transparency, refraction )
-    top = Plane( c, a, d, b, reflection_values[TOP], transparency, refraction )
-    bottom = Plane( w_, y, x, z, reflection_values[BOTTOM], transparency, refraction )
+    texture_list = Array{Union{Texture,Nothing},1}(nothing, 6)
+
+    if texture != nothing
+
+        if map_mode < CUBE_MAP || map_mode > TILE
+            map_mode = TILE
+        end
+
+        if map_mode == TILE
+
+            for i in 1:length(texture_list)
+                texture_list[i] = texture
+            end
+            
+        elseif map_mode == CUBE_MAP
+
+            ## Slicing example: splt = arr[ 2:3 , 1:3 ]
+            edge_ac = magnitude(c - a)
+            edge_ab = magnitude(b - a)
+            edge_aw = magnitude(w_ - a)
+
+            cube_map_height = 2 * edge_ac + edge_aw
+            cube_map_width = 2 * edge_ac + 2 * edge_ab
+
+            y_scale_1 = edge_ac / cube_map_height
+            y_scale_2 = ( edge_ac + edge_aw ) / cube_map_height
+
+            x_scale_1 = edge_ac / cube_map_width
+            x_scale_2 = ( edge_ac + edge_ab ) / cube_map_width
+            x_scale_3 = ( 2 * edge_ac + edge_ab ) / cube_map_width
+
+            y_pos_1 = floor( Int, height(texture) * y_scale_1 )
+            y_pos_2 = floor( Int, height(texture) * y_scale_2 )
+
+            x_pos_1 = floor( Int, width(texture) * x_scale_1 )
+            x_pos_2 = floor( Int, width(texture) * x_scale_2 )
+            x_pos_3 = floor( Int, width(texture) * x_scale_3 )
+
+            texture_list[LEFT] = Texture( texture.map[ y_pos_1+1:y_pos_2 , 1:x_pos_1 ] )
+            texture_list[RIGHT] = Texture( texture.map[ y_pos_1+1:y_pos_2 , x_pos_2+1:x_pos_3 ] )
+            texture_list[FRONT] = Texture( texture.map[ y_pos_1+1:y_pos_2 , x_pos_1+1:x_pos_2 ] )
+            texture_list[BACK] = Texture( texture.map[ y_pos_1+1:y_pos_2 , x_pos_3+1:width(texture) ] )
+            texture_list[TOP] = Texture( texture.map[ 1:y_pos_1 , x_pos_1+1:x_pos_2 ] )
+            texture_list[BOTTOM] = Texture( texture.map[ y_pos_2+1:height(texture) , x_pos_1+1:x_pos_2 ] )
+
+        end
+
+    end
+
+    left = Plane( c, y, a, w_, reflection_values[LEFT], transparency, refraction, texture_list[LEFT] )
+    right = Plane( b, x, d, z, reflection_values[RIGHT], transparency, refraction, texture_list[RIGHT] )
+    front = Plane( a, w_, b, x, reflection_values[FRONT], transparency, refraction, texture_list[FRONT] )
+    back = Plane( c, y, d, z, reflection_values[BACK], transparency, refraction, texture_list[BACK] )
+    top = Plane( c, a, d, b, reflection_values[TOP], transparency, refraction, texture_list[TOP] )
+    bottom = Plane( w_, y, x, z, reflection_values[BOTTOM], transparency, refraction, texture_list[BOTTOM] )
 
     return Cuboid( centre, left, right, front, back, top, bottom,
-        colour, diffuse, specular, shine )
+        colour, diffuse, specular, shine, texture != nothing )
 
 end
 
-function make_sphere( centre::Vector_3D, radius::Real, filename::String ; colour::RGBA=RED, diffuse::Real=0.5, specular::Real=0,
-    shine::Real=250, reflection::Real=0, transparency::Real=0, refraction::Real=0 )
+function make_sphere( centre::Vector_3D, radius::Real, filename::String ; x_rot::Real=0, y_rot::Real=0, z_rot::Real=0, colour::RGBA=RED,
+                        diffuse::Real=0.5, specular::Real=0, shine::Real=250, reflection::Real=0, transparency::Real=0, refraction::Real=0 )
 
-    return make_sphere( centre, radius, colour=colour, diffuse=diffuse, specular=specular, shine=shine, reflection=reflection, transparency=transparency, refraction=refraction, texture=make_texture(filename) )
-
-end
-
-function make_sphere( centre::Vector_3D, radius::Real, img::Union{ Array{RGBA{Float64}}, Array{RGBA{Float64}, 2} } ; colour::RGBA=RED, diffuse::Real=0.5, specular::Real=0,
-    shine::Real=250, reflection::Real=0, transparency::Real=0, refraction::Real=0 )
-
-    return make_sphere( centre, radius, colour=colour, diffuse=diffuse, specular=specular, shine=shine, reflection=reflection, transparency=transparency, refraction=refraction, texture=make_texture(img) )
+    return make_sphere( x_rot=x_rot, y_rot=y_rot, z_rot=z_rot, centre, radius, colour=colour, diffuse=diffuse, specular=specular,
+                        shine=shine, reflection=reflection, transparency=transparency, refraction=refraction, texture=make_texture(filename) )
 
 end
 
-function make_sphere( centre::Vector_3D, radius::Real ; colour::RGBA=RED, texture::Union{Texture, Nothing}=nothing, diffuse::Real=0.5, specular::Real=0,
-        shine::Real=250, reflection::Real=0, transparency::Real=0, refraction::Real=0, )
+function make_sphere( centre::Vector_3D, radius::Real, img::Union{ Array{RGBA{Float64}}, Array{RGBA{Float64}, 2} } ; x_rot::Real=0, y_rot::Real=0, z_rot::Real=0,
+                        colour::RGBA=RED, diffuse::Real=0.5, specular::Real=0, shine::Real=250, reflection::Real=0, transparency::Real=0, refraction::Real=0 )
+
+    return make_sphere( x_rot=x_rot, y_rot=y_rot, z_rot=z_rot, centre, radius, colour=colour, diffuse=diffuse, specular=specular,
+                        shine=shine, reflection=reflection, transparency=transparency, refraction=refraction, texture=make_texture(img) )
+
+end
+
+function make_sphere( centre::Vector_3D, radius::Real ; x_rot::Real=0, y_rot::Real=0, z_rot::Real=0, colour::RGBA=RED, texture::Union{Texture, Nothing}=nothing,
+                        diffuse::Real=0.5, specular::Real=0, shine::Real=250, reflection::Real=0, transparency::Real=0, refraction::Real=0, )
 
     if radius < 0 throw( DomainError(radius, "argument \"radius\" must be nonnegative") ) end
     if shine < 0 throw( DomainError(shine, "argument \"shine\" must be nonnegative") ) end
@@ -265,7 +322,7 @@ function make_sphere( centre::Vector_3D, radius::Real ; colour::RGBA=RED, textur
     if reflection < 0 || reflection > 1 throw( DomainError(reflection, "argument \"reflection\" must be between 0 and 1 inclusive") ) end
     if transparency < 0 || transparency > 1 throw( DomainError(transparency, "argument \"transparency\" must be between 0 and 1 inclusive") ) end
 
-    return Sphere( centre, radius, colour, diffuse, specular, shine, reflection, transparency, refraction, texture )
+    return Sphere( centre, radius, colour, diffuse, specular, shine, reflection, transparency, refraction, x_rot, y_rot, z_rot, texture )
 
 end
 

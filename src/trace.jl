@@ -8,6 +8,7 @@ export Shape, Texture
 export ORIGIN, VERTICAL, HORIZONTAL, HORIZONTAL_UP
 export LEFT, RIGHT, FRONT, BACK, TOP, BOTTOM
 export WHITE, RED, YELLOW, GREEN, BROWN, BLUE, PINK, BLACK, TRANSPARENT
+export CUBE_MAP, TILE
 
 export set_shapes, set_light, set_camera, set_boundary
 export clear_shapes, clear_light, clear_camera, clear_boundary
