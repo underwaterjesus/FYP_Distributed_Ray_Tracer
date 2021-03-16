@@ -324,7 +324,12 @@ function texture_colour(sphere::Sphere, intersection_point::Vector_3D)
     width_idx = max(width_idx, 1)
     height_idx = max(height_idx, 1)
 
-    return sphere.texture.map[ (height(sphere.texture) + 1) - height_idx , width_idx ]
+    return_colour = sphere.texture.map[ (height(sphere.texture) + 1) - height_idx , width_idx ]
+    if return_colour.alpha < 1.0
+        return_colour = ( return_colour * return_colour.alpha ) + ( sphere.colour * (1 - return_colour.alpha) )
+    end
+
+    return RGBA( return_colour.r, return_colour.g, return_colour.b, 1.0 )
 
 end
 
@@ -354,6 +359,11 @@ function texture_colour(cuboid::Cuboid, face::Int, intersection_point::Vector_3D
     width_idx = max(width_idx, 1)
     height_idx = max(height_idx, 1)
 
-    return plane.texture.map[ (height(plane.texture) + 1) - height_idx , width_idx ]
+    return_colour = plane.texture.map[ (height(plane.texture) + 1) - height_idx , width_idx ]
+    if return_colour.alpha < 1.0
+        return_colour = ( return_colour * return_colour.alpha ) + ( cuboid.colour * (1 - return_colour.alpha) )
+    end
+
+    return RGBA( return_colour.r, return_colour.g, return_colour.b, 1.0 )
 
 end
