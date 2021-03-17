@@ -246,7 +246,13 @@ function colour_pixel(scene::Scene, ray::Ray, closest_intersection_value::Real, 
 
     light_side_n = dot(n, -light_ray) < 0 ? n : -n
     epsilon_point = idx > 0 ? intersect_point + ( light_side_n * (10 * EPSILON) ) : intersect_point
-    base_colour = idx > 0 ? scene.light.brightness * scene.shapes[idx].colour : scene.light.brightness * boundary_colour(intersect_point)
+    
+    if side_id == nothing
+        base_colour = idx > 0 ? scene.light.brightness * texture_colour(scene.shapes[idx], intersect_point) : scene.light.brightness * boundary_colour(intersect_point)
+    else
+        base_colour = idx > 0 ? scene.light.brightness * texture_colour(scene.shapes[idx], side_id, intersect_point) : scene.light.brightness * boundary_colour(intersect_point)
+    end
+
     ambient_colour = base_colour * scene.light.ambient
     reflect_colour = BLACK
     reflection = side == nothing ? scene.shapes[idx].reflection : side.reflection
@@ -304,4 +310,60 @@ function background_colour(point::Vector_3D)
     b2 = t*1.0
 
     return RGBA( r+r2, g+g2, b+b2, 1 )
+end
+
+function texture_colour(sphere::Sphere, intersection_point::Vector_3D)
+    
+    if sphere.texture == nothing
+        return sphere.colour
+    end
+
+    lat, lng = coords_to_lat_lng(sphere, intersection_point)
+    width_idx = floor( Int, min( (width(sphere.texture) * lat), width(sphere.texture) ) )
+    height_idx = floor( Int, min( (height(sphere.texture) * lng), height(sphere.texture) ) )
+    width_idx = max(width_idx, 1)
+    height_idx = max(height_idx, 1)
+
+    return_colour = sphere.texture.map[ (height(sphere.texture) + 1) - height_idx , width_idx ]
+    if return_colour.alpha < 1.0
+        return_colour = ( return_colour * return_colour.alpha ) + ( sphere.colour * (1 - return_colour.alpha) )
+    end
+
+    return RGBA( return_colour.r, return_colour.g, return_colour.b, 1.0 )
+
+end
+
+function texture_colour(cuboid::Cuboid, face::Int, intersection_point::Vector_3D)
+    
+    if face < 1 || face > 6 || !cuboid.has_texture
+        return cuboid.colour
+    end
+
+    if face == LEFT
+        plane = cuboid.left
+    elseif face == RIGHT
+        plane = cuboid.right
+    elseif face == FRONT
+        plane = cuboid.front
+    elseif face == BACK
+        plane = cuboid.back
+    elseif face == TOP
+        plane = cuboid.top
+    elseif face == BOTTOM
+        plane = cuboid.bottom
+    end
+
+    x_axis_scaled, y_axis_scaled = coords_to_x_y(cuboid, face, intersection_point)
+    width_idx = floor( Int, min( (width(plane.texture) * x_axis_scaled), width(plane.texture) ) )
+    height_idx = floor( Int, min( (height(plane.texture) * y_axis_scaled), height(plane.texture) ) )
+    width_idx = max(width_idx, 1)
+    height_idx = max(height_idx, 1)
+
+    return_colour = plane.texture.map[ (height(plane.texture) + 1) - height_idx , width_idx ]
+    if return_colour.alpha < 1.0
+        return_colour = ( return_colour * return_colour.alpha ) + ( cuboid.colour * (1 - return_colour.alpha) )
+    end
+
+    return RGBA( return_colour.r, return_colour.g, return_colour.b, 1.0 )
+
 end

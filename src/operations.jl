@@ -211,6 +211,19 @@ function shape_details(cuboid::Cuboid)
     return s
 end
 
+####################
+## Texture Functions
+####################
+
+function height(texture::Texture)
+    return size(texture.map)[1]
+end
+
+function width(texture::Texture)
+    return size(texture.map)[2]
+end
+
+
 #####################
 ## Rotation Functions
 #####################

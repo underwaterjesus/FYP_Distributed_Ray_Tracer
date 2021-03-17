@@ -291,3 +291,47 @@ function closest_intersection(scene::Scene, ray::Ray, ignore::Int=0)
     return closest_intersection_value, closest_index, side
 
 end
+
+function coords_to_lat_lng(sphere::Sphere, intersection_point::Vector_3D)
+    
+    point_translated_scaled = (intersection_point - sphere.centre) / sphere.radius
+    ϕ = atan( point_translated_scaled.z, point_translated_scaled.x )
+    θ = asin( point_translated_scaled.y )
+    lat = 1 - (ϕ + π) / (2π)
+    lng = ( θ + π/2 ) / π
+
+    return (lat, lng)
+
+end
+
+function coords_to_x_y(cuboid::Cuboid, face::Int, intersection_point::Vector_3D)
+    
+    if face == LEFT
+        plane = cuboid.left
+    elseif face == RIGHT
+        plane = cuboid.right
+    elseif face == FRONT
+        plane = cuboid.front
+    elseif face == BACK
+        plane = cuboid.back
+    elseif face == TOP
+        plane = cuboid.top
+    elseif face == BOTTOM
+        plane = cuboid.bottom
+    else
+        return nothing, nothing
+    end
+
+    x_axis = plane.lower_right - plane.lower_left
+    y_axis = plane.upper_left - plane.lower_left
+    axes_intersection = intersection_point - plane.lower_left
+
+    x_projection = ( dot(axes_intersection , x_axis) / dot(x_axis , x_axis) ) * x_axis
+    y_projection = ( dot(axes_intersection , y_axis) / dot(y_axis , y_axis) ) * y_axis
+
+    x_idx = magnitude(x_projection) / magnitude(x_axis)
+    y_idx = magnitude(y_projection) / magnitude(y_axis)
+
+    return (x_idx, y_idx)
+
+end

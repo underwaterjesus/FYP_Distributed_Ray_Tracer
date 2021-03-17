@@ -40,3 +40,6 @@ const BLUE= RGBA(0, 0.414, 0.813, 1)
 const PINK = RGBA(0.996, 0.57, 0.551, 1)
 const BLACK = RGBA(0, 0, 0, 1)
 const TRANSPARENT = RGBA(0, 0, 0, 1)
+
+const CUBE_MAP = 1
+const TILE = 2
