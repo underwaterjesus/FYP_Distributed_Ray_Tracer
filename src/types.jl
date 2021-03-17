@@ -161,6 +161,25 @@ function make_scene( len::Real=0, width::Real=0, height::Real=0 ;
 
 end
 
+function make_cuboid( centre::Vector_3D, len::Real, wdh::Real, hgt::Real, filename::String ;
+        x_rot::Real=0, y_rot::Real=0, z_rot::Real=0, colour::RGBA=GREEN, diffuse::Real=0.5,
+        specular::Real=0, shine::Real=500, transparency::Real=0, refraction::Real=0, reflection::Real=0,
+        sides::Union{ Int, Tuple{Int, Vararg{Int}} }=( LEFT, RIGHT, FRONT, BACK, TOP, BOTTOM ), map_mode::Int=TILE )
+
+        return make_cuboid( centre, len, wdh, hgt, x_rot=x_rot, y_rot=y_rot, z_rot=z_rot, colour=colour, diffuse=diffuse, specular=specular, shine=shine,
+                        transparency=transparency, refraction=refraction, reflection=reflection, sides=sides, map_mode=map_mode, texture=make_texture(filename) )
+
+end
+
+function make_cuboid( centre::Vector_3D, len::Real, wdh::Real, hgt::Real, img::Union{ Array{RGBA{Float64}}, Array{RGBA{Float64}, 2} }, ;
+    x_rot::Real=0, y_rot::Real=0, z_rot::Real=0, colour::RGBA=GREEN, diffuse::Real=0.5, specular::Real=0, shine::Real=500, transparency::Real=0,
+    refraction::Real=0, reflection::Real=0, sides::Union{ Int, Tuple{Int, Vararg{Int}} }=( LEFT, RIGHT, FRONT, BACK, TOP, BOTTOM ), map_mode::Int=TILE )
+
+    return make_cuboid( centre, len, wdh, hgt, x_rot=x_rot, y_rot=y_rot, z_rot=z_rot, colour=colour, diffuse=diffuse, specular=specular, shine=shine,
+                        transparency=transparency, refraction=refraction, reflection=reflection, sides=sides, map_mode=map_mode, texture=make_texture(img) )
+
+end
+
 function make_cuboid( centre::Vector_3D, len::Real, wdh::Real, hgt::Real ;
     x_rot::Real=0, y_rot::Real=0, z_rot::Real=0, colour::RGBA=GREEN,
     diffuse::Real=0.5, specular::Real=0, shine::Real=500, transparency::Real=0, refraction::Real=0,
