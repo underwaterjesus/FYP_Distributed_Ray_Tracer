@@ -8,7 +8,7 @@ function ray_cast(ray::Ray, scene::Scene, reflect_limit::Int=REFLECT_LIMIT, refr
     closest_intersection_value, closest_index, side = closest_intersection(scene, ray)
 
     if closest_index != nothing
-        return colour_pixel( scene, ray, closest_intersection_value, closest_index, side, 0 ) 
+        return colour_pixel( scene, ray, closest_intersection_value, closest_index, side, 0, 0 ) 
     end
 
     return background_colour(ray.direction)
@@ -154,15 +154,19 @@ function schlick(index_a::Real, index_b::Real, angle_cos::Real)
 
 end
 
-function reflection_colour(scene::Scene, ray::Ray, normal::Vector_3D, intersection_point::Vector_3D, idx::Int, refract_count::Int)
+function reflection_colour(scene::Scene, ray::Ray, normal::Vector_3D, intersection_point::Vector_3D, idx::Int, reflect_count::Int, refract_count::Int)
+    
+    if reflect_count >= REFLECT_LIMIT
+        return scene.shapes[idx].colour
+    end
 
     reflect_vector = reflect( unit_vector(ray.direction), normal )
-    reflect_ray = Ray( intersection_point, reflect_vector )
+    reflect_ray = Ray( intersection_point + ( normal * (10 * EPSILON) ), reflect_vector )
 
-    closest_intersection_value, closest_index, side = closest_intersection(scene, reflect_ray, idx)
+    closest_intersection_value, closest_index, side = closest_intersection(scene, reflect_ray)
 
     if closest_index != nothing
-        return colour_pixel(scene, reflect_ray, closest_intersection_value, closest_index, side, refract_count)
+        return colour_pixel(scene, reflect_ray, closest_intersection_value, closest_index, side, reflect_count+1, refract_count)
     end
 
     return background_colour(reflect_vector)
@@ -186,7 +190,7 @@ function refract_ray(ray::Ray, normal::Vector_3D, intersection_point::Vector_3D,
     
 end
 
-function transparency_colour(scene::Scene, ray::Ray, normal::Vector_3D, intersection_point::Vector_3D, idx::Int, side::Union{Plane, Nothing}, refract_count::Int)
+function transparency_colour(scene::Scene, ray::Ray, normal::Vector_3D, intersection_point::Vector_3D, idx::Int, side::Union{Plane, Nothing}, reflect_count::Int, refract_count::Int)
 
     refraction = side == nothing ? scene.shapes[idx].refraction : side.refraction
     reflection_ray = nothing
@@ -200,12 +204,12 @@ function transparency_colour(scene::Scene, ray::Ray, normal::Vector_3D, intersec
     end
 
     if transparency_ray == nothing
-        return ( BLACK, schlick_value )
+        return ( scene.shapes[idx].colour, schlick_value )
     end
     closest_intersection_value, closest_index, side = closest_intersection(scene, transparency_ray)
 
     if closest_index != nothing
-        return_colour = ( colour_pixel( scene, transparency_ray, closest_intersection_value, closest_index, side, refract_count ), schlick_value )
+        return_colour = ( colour_pixel( scene, transparency_ray, closest_intersection_value, closest_index, side, reflect_count, refract_count ), schlick_value )
     else
         return_colour = ( background_colour( transparency_ray.direction ), schlick_value )
     end
@@ -214,7 +218,7 @@ function transparency_colour(scene::Scene, ray::Ray, normal::Vector_3D, intersec
 
 end
 
-function colour_pixel(scene::Scene, ray::Ray, closest_intersection_value::Real, idx::Int, side_id::Union{Int, Nothing}, refract_count::Int)
+function colour_pixel(scene::Scene, ray::Ray, closest_intersection_value::Real, idx::Int, side_id::Union{Int, Nothing}, reflect_count::Int, refract_count::Int)
     
     intersect_point = ray.origin + closest_intersection_value * ray.direction
     light_ray = unit_vector( scene.light.position - intersect_point )
@@ -261,13 +265,13 @@ function colour_pixel(scene::Scene, ray::Ray, closest_intersection_value::Real, 
     transparent_colour = BLACK
 
     if transparency > 0 && idx > 0
-        transparent_colour, schlick_value =  transparency_colour( scene, ray, n, intersect_point, idx, side, refract_count )
+        transparent_colour, schlick_value =  transparency_colour( scene, ray, n, intersect_point, idx, side, reflect_count, refract_count )
         transparent_colour = transparent_colour * ( transparency - (schlick_value > reflection ? schlick_value : 0) )
         reflection = max( reflection, schlick_value )
     end
     
     if reflection > 0 && idx > 0
-        reflect_colour = reflection * reflection_colour( scene, ray, n, intersect_point, idx, refract_count )
+        reflect_colour = reflection * reflection_colour( scene, ray, n, intersect_point, idx, reflect_count, refract_count )
     end
 
     if ( shadow = shadow_level(scene, epsilon_point) ) > 0
