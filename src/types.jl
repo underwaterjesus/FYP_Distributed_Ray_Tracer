@@ -30,8 +30,8 @@ end
 struct Light 
 
     position::Vector_3D
-    brightness::Float32
-    ambient::Float32
+    brightness::Float64
+    ambient::Float64
 
 end
 
@@ -92,9 +92,9 @@ struct Cuboid <: Shape
     top::Plane
     bottom::Plane
     colour::RGBA
-    diffuse::Float32
-    specular::Float32
-    shine::Float32
+    diffuse::Float64
+    specular::Float64
+    shine::Float64
     has_texture::Bool
 
 end
@@ -110,6 +110,7 @@ struct BoundingBox
     diffuse::Float32
     specular::Float32
     shine::Float32
+    colour::RGBA
 
 end
 
@@ -119,6 +120,7 @@ mutable struct Scene
     shapes::Array{ <:Shape }
     light::Union{ Light, Nothing }
     camera::Union{ Camera, Nothing }
+    colour::RGBA
 
 end
 
@@ -128,7 +130,7 @@ end
 
 function make_scene( len::Real=0, width::Real=0, height::Real=0 ;
     light::Union{Light, Nothing}=nothing, camera::Union{Camera, Nothing}=nothing, shapes::Array{<:Shape}=Shape[],
-    diffuse::Real=0.5, specular::Real=0.5, shine::Real=250 )
+    colour::RGBA=BACKGROUND_COLOUR, diffuse::Real=0.5, specular::Real=0.5, shine::Real=250 )
 
     if shine < 0 throw( DomainError(shine, "argument \"shine\" must be nonnegative") ) end
     if specular < 0 || specular > 1 throw( DomainError(specular, "argument \"specular\" must be between 0 and 1 inclusive") ) end
@@ -157,7 +159,7 @@ function make_scene( len::Real=0, width::Real=0, height::Real=0 ;
         box = BoundingBox(left, right, front, back, top, bottom, diffuse, specular, shine)
     end
 
-    return Scene( box, shapes, light, camera )
+    return Scene( box, shapes, light, camera, colour )
 
 end
 
@@ -361,7 +363,7 @@ function make_light(x::Real, y::Real, z::Real, brightness::Real, ambient::Real)
 
 function make_camera(origin::Vector_3D, focus::Vector_3D, up_vector::Vector_3D)
     if ( origin === focus ) || ( abs( origin.x - focus.x ) < eps(Float64) && abs( origin.y - focus.y ) < eps(Float64) && abs( origin.z - focus.z ) < eps(Float64) )
-    throw( ArgumentError("a camera's focus cannot be the same as its origin") )
+        throw( ArgumentError("a camera's focus cannot be the same as its origin") )
     end
 
     return Camera(origin, focus, up_vector)

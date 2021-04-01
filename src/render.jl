@@ -1,5 +1,7 @@
 include("intersections.jl")
 
+using Images: clamp01nan
+
 ######################
 ## Rendering Functions
 ######################
@@ -11,7 +13,7 @@ function ray_cast(ray::Ray, scene::Scene, reflect_limit::Int=REFLECT_LIMIT, refr
         return colour_pixel( scene, ray, closest_intersection_value, closest_index, side, 0, 0 ) 
     end
 
-    return background_colour(ray.direction)
+    return background_colour(scene, ray.direction)
 end
 
 function render_scene(scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image_height::Int=DEFAULT_IMAGE_HEIGHT, vertical_fov::Real=DEFAULT_FOV, samples::Int=SAMPLES ; reflect_limit::Int=DEFAULT_REFLECT_LIMIT, refract_limit::Int=DEFAULT_REFRACT_LIMIT)
@@ -33,7 +35,7 @@ function render_scene(scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image_
 
     w = unit_vector( scene.camera.origin - scene.camera.focus )
     u = unit_vector( cross( scene.camera.up_vector, w ) )
-    v = cross(w, u)
+    v = unit_vector( scene.camera.up_vector )
 
     horizontal = viewport_width * u
     vertical = viewport_height * v
@@ -59,7 +61,7 @@ function render_scene(scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image_
 
             end
 
-            pixel_colour = RGBA(0, 0, 0, 1)
+            pixel_colour = RGBA(0, 0, 0, 1.0)
 
             for s in 1:samples
 
@@ -74,7 +76,7 @@ function render_scene(scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image_
         end
     end
 
-    return img
+    return map( clamp01nan , img )
     
 end
 
@@ -122,15 +124,17 @@ function shadow_level(scene::Scene, point::Vector_3D)
 
 end
 
-function boundary_colour(intersection_point::Vector_3D)
+function boundary_colour(scene::Scene, intersection_point::Vector_3D)
     uv = unit_vector(intersect_point)
-    t = 0.5 * (uv.y + 1.0)
-    r = (1.0-t)*(1.0)
-    g = (1.0-t)*(1.0)
-    b = (1.0-t)*(1.0)
-    r2 = t*(0.5)
-    g2 = t*0.7
-    b2 = t*1.0
+    t = 0.5 * ( uv.x + 1.0 )
+    u = 0.5 * ( uv.y + 1.0 )
+    v = 0.5 * ( uv.z + 1.0 )
+    r = (1.0 - t)*(1.0)
+    g = (1.0 - u)*(1.0)
+    b = (1.0 - v)*(1.0)
+    r2 = t * scene.colour.r
+    g2 = u * scene.colour.g
+    b2 = v * scene.colour.b
 
     return RGBA( r+r2, g+g2, b+b2, 1.0 )
 end
@@ -169,7 +173,7 @@ function reflection_colour(scene::Scene, ray::Ray, normal::Vector_3D, intersecti
         return colour_pixel(scene, reflect_ray, closest_intersection_value, closest_index, side, reflect_count+1, refract_count)
     end
 
-    return background_colour(reflect_vector)
+    return background_colour(scene, reflect_vector)
 
 end
 
@@ -193,7 +197,6 @@ end
 function transparency_colour(scene::Scene, ray::Ray, normal::Vector_3D, intersection_point::Vector_3D, idx::Int, side::Union{Plane, Nothing}, reflect_count::Int, refract_count::Int)
 
     refraction = side == nothing ? scene.shapes[idx].refraction : side.refraction
-    reflection_ray = nothing
     schlick_value = 0.0
     if refraction > 0 && refract_count < REFRACT_LIMIT
         transparency_ray, cos_ = refract_ray(ray, normal, intersection_point, refraction)
@@ -211,7 +214,7 @@ function transparency_colour(scene::Scene, ray::Ray, normal::Vector_3D, intersec
     if closest_index != nothing
         return_colour = ( colour_pixel( scene, transparency_ray, closest_intersection_value, closest_index, side, reflect_count, refract_count ), schlick_value )
     else
-        return_colour = ( background_colour( transparency_ray.direction ), schlick_value )
+        return_colour = ( background_colour( scene, transparency_ray.direction ), schlick_value )
     end
     
     return return_colour
@@ -252,9 +255,9 @@ function colour_pixel(scene::Scene, ray::Ray, closest_intersection_value::Real, 
     epsilon_point = idx > 0 ? intersect_point + ( light_side_n * (10 * EPSILON) ) : intersect_point
     
     if side_id == nothing
-        base_colour = idx > 0 ? scene.light.brightness * texture_colour(scene.shapes[idx], intersect_point) : scene.light.brightness * boundary_colour(intersect_point)
+        base_colour = idx > 0 ? scene.light.brightness * texture_colour(scene.shapes[idx], intersect_point) : scene.light.brightness * background_colour(scene, intersect_point)
     else
-        base_colour = idx > 0 ? scene.light.brightness * texture_colour(scene.shapes[idx], side_id, intersect_point) : scene.light.brightness * boundary_colour(intersect_point)
+        base_colour = idx > 0 ? scene.light.brightness * texture_colour(scene.shapes[idx], side_id, intersect_point) : scene.light.brightness * boundary_colour(scene, intersect_point)
     end
 
     ambient_colour = base_colour * scene.light.ambient
@@ -282,8 +285,8 @@ function colour_pixel(scene::Scene, ray::Ray, closest_intersection_value::Real, 
     cos_light_ray_normal = dot(light_ray, n)
 
     if cos_light_ray_normal < 0
-        diffuse_light = RGBA(0, 0, 0, 1)
-        specular_light = RGBA(0, 0, 0, 1)
+        diffuse_light = RGBA(0, 0, 0, 1.0)
+        specular_light = RGBA(0, 0, 0, 1.0)
     else
         diffuse_light = ( base_colour * scene.shapes[idx].diffuse * cos_light_ray_normal ) / distance
 
@@ -291,11 +294,11 @@ function colour_pixel(scene::Scene, ray::Ray, closest_intersection_value::Real, 
         cos_reflect_ray_cast_ray = dot( reflect_ray, -ray.direction )
 
         if cos_reflect_ray_cast_ray < 0
-            specular_light = RGBA(0, 0, 0, 1)
+            specular_light = RGBA(0, 0, 0, 1.0)
         else
             specular_factor = cos_reflect_ray_cast_ray ^ scene.shapes[idx].shine
             specular_val = ( scene.light.brightness * scene.shapes[idx].specular * specular_factor ) / distance
-            specular_light = RGBA(specular_val, specular_val, specular_val, 1)
+            specular_light = RGBA(specular_val, specular_val, specular_val, 1.0)
         end
     end
 
@@ -303,17 +306,17 @@ function colour_pixel(scene::Scene, ray::Ray, closest_intersection_value::Real, 
 
 end
 
-function background_colour(point::Vector_3D)
-    uv = unit_vector(point)
+function background_colour(scene::Scene, direction::Vector_3D)
+    uv = unit_vector(direction)
     t = 0.5 * (uv.y + 1.0)
     r = 1.0-t
     g = 1.0-t
     b = 1.0-t
-    r2 = t*(0.5)
-    g2 = t*0.7
-    b2 = t*1.0
+    r2 = t * scene.colour.r
+    g2 = t * scene.colour.g
+    b2 = t * scene.colour.b
 
-    return RGBA( r+r2, g+g2, b+b2, 1 )
+    return RGBA( r+r2, g+g2, b+b2, 1.0 )
 end
 
 function texture_colour(sphere::Sphere, intersection_point::Vector_3D)
@@ -330,7 +333,7 @@ function texture_colour(sphere::Sphere, intersection_point::Vector_3D)
 
     return_colour = sphere.texture.map[ (height(sphere.texture) + 1) - height_idx , width_idx ]
     if return_colour.alpha < 1.0
-        return_colour = ( return_colour * return_colour.alpha ) + ( sphere.colour * (1 - return_colour.alpha) )
+        return_colour = ( return_colour * return_colour.alpha ) + ( sphere.colour * (1.0 - return_colour.alpha) )
     end
 
     return RGBA( return_colour.r, return_colour.g, return_colour.b, 1.0 )

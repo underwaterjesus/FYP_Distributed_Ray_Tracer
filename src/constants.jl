@@ -31,15 +31,16 @@ const BACK = 4
 const TOP = 5
 const BOTTOM = 6
 
-const WHITE = RGBA(0.957, 0.957, 0.957, 1)
-const RED = RGBA(0.832, 0.004, 0, 1)
-const YELLOW = RGBA(0.953, 0.719, 0.031, 1)
-const GREEN = RGBA(0.008, 0.316, 0.094, 1)
-const BROWN = RGBA(0.563, 0.227, 0, 1)
-const BLUE= RGBA(0, 0.414, 0.813, 1)
-const PINK = RGBA(0.996, 0.57, 0.551, 1)
-const BLACK = RGBA(0, 0, 0, 1)
-const TRANSPARENT = RGBA(0, 0, 0, 1)
+const WHITE = RGBA(0.957, 0.957, 0.957, 1.0)
+const RED = RGBA(0.832, 0.004, 0, 1.0)
+const YELLOW = RGBA(0.953, 0.719, 0.031, 1.0)
+const GREEN = RGBA(0.008, 0.316, 0.094, 1.0)
+const BROWN = RGBA(0.563, 0.227, 0, 1.0)
+const BLUE= RGBA(0, 0.414, 0.813, 1.0)
+const PINK = RGBA(0.996, 0.57, 0.551, 1.0)
+const BLACK = RGBA(0, 0, 0, 1.0)
+const TRANSPARENT = RGBA(0, 0, 0, 1.0)
+const BACKGROUND_COLOUR = RGBA(0.5, 0.7, 1.0, 1.0)
 
 const CUBE_MAP = 1
 const TILE = 2

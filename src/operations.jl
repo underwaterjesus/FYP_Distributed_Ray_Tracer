@@ -137,7 +137,7 @@ function Base.:+(colour::RGBA{T}, colour2::RGBA{T}) where T<:AbstractFloat
     return RGBA(colour.r + colour2.r, colour.g + colour2.g, colour.b + colour2.b, colour.alpha)
 end
 
-function Base.:/(colour::RGBA{T}, num::Real)  where T<:AbstractFloat
+function Base.:/(colour::RGBA{T}, num::Real) where T<:AbstractFloat
     return RGBA(colour.r / num, colour.g / num, colour.b / num, colour.alpha)
 end
 
