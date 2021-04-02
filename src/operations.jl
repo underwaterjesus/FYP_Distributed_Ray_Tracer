@@ -232,9 +232,8 @@ function rotate_on_axis(point::Vector_3D, angle::Real, axis_id::Int)
     
     if axis_id < 1 || axis_id > 3 throw( DomainError(axis_id, "argument \"axis_id\" must be between 1 and 3") ) end
 
-    theta = deg2rad( angle % 360 )
-    cos_theta = cos(theta)
-    sin_theta = sin(theta)
+    cos_theta = cos(angle)
+    sin_theta = sin(angle)
 
     if axis_id == X_AXIS
         y_ = cos_theta * point.y - sin_theta * point.z

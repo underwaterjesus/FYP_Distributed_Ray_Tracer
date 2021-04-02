@@ -207,6 +207,10 @@ function make_cuboid( centre::Vector_3D, len::Real, wdh::Real, hgt::Real ;
     x = Vector_3D( wdh/2, -hgt/2, len/2 )
     y = Vector_3D( -wdh/2, -hgt/2, -len/2 )
     z = Vector_3D( wdh/2, -hgt/2, -len/2 )
+    
+    x_rot = deg2rad(x_rot)
+    y_rot = deg2rad(y_rot)
+    z_rot = deg2rad(z_rot)
 
     if abs(x_rot) > 0
         a = rotate_on_axis(a, x_rot, X_AXIS)
@@ -343,7 +347,7 @@ function make_sphere( centre::Vector_3D, radius::Real ; x_rot::Real=0, y_rot::Re
     if reflection < 0 || reflection > 1 throw( DomainError(reflection, "argument \"reflection\" must be between 0 and 1 inclusive") ) end
     if transparency < 0 || transparency > 1 throw( DomainError(transparency, "argument \"transparency\" must be between 0 and 1 inclusive") ) end
 
-    return Sphere( centre, radius, colour, diffuse, specular, shine, reflection, transparency, refraction, x_rot, y_rot, z_rot, texture )
+    return Sphere( centre, radius, colour, diffuse, specular, shine, reflection, transparency, refraction, deg2rad(x_rot), deg2rad(y_rot), deg2rad(z_rot), texture )
 
 end
 

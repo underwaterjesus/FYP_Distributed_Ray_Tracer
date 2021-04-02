@@ -295,6 +295,17 @@ end
 function coords_to_lat_lng(sphere::Sphere, intersection_point::Vector_3D)
     
     point_translated_scaled = (intersection_point - sphere.centre) / sphere.radius
+
+    if abs(sphere.x_rot) > EPSILON
+        point_translated_scaled = rotate_on_axis( point_translated_scaled, -sphere.x_rot, X_AXIS)
+    end
+    if abs(sphere.y_rot) > EPSILON
+        point_translated_scaled = rotate_on_axis( point_translated_scaled, -sphere.y_rot, Y_AXIS)
+    end
+    if abs(sphere.z_rot) > EPSILON
+        point_translated_scaled = rotate_on_axis( point_translated_scaled, -sphere.z_rot, Z_AXIS)
+    end
+
     ϕ = atan( point_translated_scaled.z, point_translated_scaled.x )
     θ = asin( point_translated_scaled.y )
     lat = 1 - (ϕ + π) / (2π)
