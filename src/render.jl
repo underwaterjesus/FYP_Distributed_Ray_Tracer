@@ -326,8 +326,8 @@ function texture_colour(sphere::Sphere, intersection_point::Vector_3D)
     end
 
     lat, lng = coords_to_lat_lng(sphere, intersection_point)
-    width_idx = floor( Int, min( (width(sphere.texture) * lat), width(sphere.texture) ) )
-    height_idx = floor( Int, min( (height(sphere.texture) * lng), height(sphere.texture) ) )
+    width_idx = floor( Int, min( (width(sphere.texture) * lng), width(sphere.texture) ) )
+    height_idx = floor( Int, min( (height(sphere.texture) * lat), height(sphere.texture) ) )
     width_idx = max(width_idx, 1)
     height_idx = max(height_idx, 1)
 
