@@ -1,5 +1,7 @@
 include("intersections.jl")
-
+using Distributed
+using DistributedArrays
+using ClusterManagers
 using Images: clamp01nan
 
 ######################
@@ -16,7 +18,8 @@ function ray_cast(ray::Ray, scene::Scene, reflect_limit::Int=REFLECT_LIMIT, refr
     return background_colour(scene, ray.direction)
 end
 
-function render_scene(scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image_height::Int=DEFAULT_IMAGE_HEIGHT, vertical_fov::Real=DEFAULT_FOV, samples::Int=SAMPLES ; reflect_limit::Int=DEFAULT_REFLECT_LIMIT, refract_limit::Int=DEFAULT_REFRACT_LIMIT)
+function render_scene( scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image_height::Int=DEFAULT_IMAGE_HEIGHT, vertical_fov::Real=DEFAULT_FOV, samples::Int=SAMPLES ; reflect_limit::Int=DEFAULT_REFLECT_LIMIT,
+                        refract_limit::Int=DEFAULT_REFRACT_LIMIT, worker_list::Union{Vector{Int},Nothing}=nothing )
     
     if scene.camera == nothing throw( ArgumentError("render_scene: Scene cannot have Nothing as Camera value when passed") ) end
     if scene.light == nothing throw( ArgumentError("render_scene: Scene cannot have Nothing as Light value when passed") ) end
@@ -26,6 +29,8 @@ function render_scene(scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image_
     if vertical_fov <= 0 || vertical_fov >= 180 throw( DomainError(vertical_fov, "argument \"vertical_fov\" must be between 0 and 180 exclusive") ) end
     if reflect_limit < 0 throw( DomainError(reflect_limit, "argument \"reflect_limit\" must be nonnegative") ) end
     if refract_limit < 0 throw( DomainError(refract_limit, "argument \"refract_limit\" must be nonnegative") ) end
+
+    img = Array{RGBA, 2}(undef, image_height, image_width)
 
     aspect_ratio = image_width / image_height
     fov_rads = deg2rad(vertical_fov)
@@ -44,7 +49,75 @@ function render_scene(scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image_
     global REFLECT_LIMIT = reflect_limit
     global REFRACT_LIMIT = refract_limit
 
-    img = Array{RGBA, 2}(undef, image_height, image_width)
+    if worker_list != nothing
+
+        @sync for id in worker_list
+            @spawnat(id, Base.eval(Main, Expr(:(=), :scene, scene)))
+            @spawnat(id, Base.eval(Main, Expr(:(=), :image_width, image_width)))
+            @spawnat(id, Base.eval(Main, Expr(:(=), :image_height, image_height)))
+            @spawnat(id, Base.eval(Main, Expr(:(=), :fov_rads, fov_rads)))
+            @spawnat(id, Base.eval(Main, Expr(:(=), :h, h)))
+            @spawnat(id, Base.eval(Main, Expr(:(=), :viewport_height, viewport_height)))
+            @spawnat(id, Base.eval(Main, Expr(:(=), :viewport_width, viewport_width)))
+            @spawnat(id, Base.eval(Main, Expr(:(=), :w, w)))
+            @spawnat(id, Base.eval(Main, Expr(:(=), :u, u)))
+            @spawnat(id, Base.eval(Main, Expr(:(=), :v, v)))
+            @spawnat(id, Base.eval(Main, Expr(:(=), :horizontal, horizontal)))
+            @spawnat(id, Base.eval(Main, Expr(:(=), :vertical, vertical)))
+            @spawnat(id, Base.eval(Main, Expr(:(=), :lower_left_corner, lower_left_corner)))
+            @spawnat id (global REFLECT_LIMIT = reflect_limit)
+            @spawnat id (global REFRACT_LIMIT = refract_limit)      
+        end
+
+        fill!(img, RGBA(0.0,0.0,0.0,1.0))
+        d_arr = distribute(img)
+        
+        #@sync @async d_arr = distribute(img)
+        @sync for id in worker_list
+            @spawnat id for j in size(localpart(d_arr))[1]:-1:1
+                for i in 1:size(localpart(d_arr))[2]
+                    
+                    if samples == 1
+
+                        h_offset = localindices(d_arr)[2][1] + ( i - 1 )
+                        v_offset = localindices(d_arr)[1][1] + ( j - 1 )
+                        hrzt_factor = h_offset / ( image_width - 1 )
+                        vert_factor = v_offset / ( image_height - 1 )
+                        ray = Ray( scene.camera.origin, ( lower_left_corner + (hrzt_factor * horizontal) + (vert_factor * vertical) - scene.camera.origin ) )
+                        pixel_colour = ray_cast(ray, scene)
+                        localpart(d_arr)[ ( size(localpart(d_arr))[1] - j ) + 1, i ] = RGBA( pixel_colour.r, pixel_colour.g, pixel_colour.b, pixel_colour.alpha )
+
+                        continue
+
+                    end
+
+                    pixel_colour = RGBA(0, 0, 0, 1.0)
+
+                    for s in 1:samples
+
+                        h_offset = localindices(d_arr)[2][1] + ( i - 1 )
+                        v_offset = localindices(d_arr)[1][1] + ( j - 1 )
+                        hrzt_factor = ( h_offset + rand(Float32) ) / ( image_width - 1 )
+                        vert_factor = ( v_offset + rand(Float32) ) / ( image_height - 1 )
+                        ray = Ray( scene.camera.origin, ( lower_left_corner + (hrzt_factor * horizontal) + (vert_factor * vertical) - scene.camera.origin ) )
+                        pixel_colour = pixel_colour + ray_cast(ray, scene)
+
+                    end
+
+                    localpart(d_arr)[ ( size(localpart(d_arr))[1] - j ) + 1, i ] = RGBA( pixel_colour.r / samples, pixel_colour.g / samples, pixel_colour.b / samples, pixel_colour.alpha )
+
+                end
+            end
+
+        end
+
+        global REFLECT_LIMIT = 0
+        global REFRACT_LIMIT = 0
+
+
+        return map( clamp01nan , convert(Array{RGBA, 2}, d_arr) )
+
+    end
 
     for j in image_height:-1:1
         for i in 1:image_width
@@ -76,8 +149,11 @@ function render_scene(scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image_
         end
     end
 
+    global REFLECT_LIMIT = 0
+    global REFRACT_LIMIT = 0
+
     return map( clamp01nan , img )
-    
+
 end
 
 ##########################################
