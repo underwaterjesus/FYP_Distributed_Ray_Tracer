@@ -65,6 +65,8 @@ function render_scene( scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image
             @spawnat(id, Base.eval(Main, Expr(:(=), :horizontal, horizontal)))
             @spawnat(id, Base.eval(Main, Expr(:(=), :vertical, vertical)))
             @spawnat(id, Base.eval(Main, Expr(:(=), :lower_left_corner, lower_left_corner)))
+            @spawnat id (global REFLECT_LIMIT = reflect_limit)
+            @spawnat id (global REFRACT_LIMIT = refract_limit)      
         end
 
         fill!(img, RGBA(0.0,0.0,0.0,1.0))
@@ -109,6 +111,10 @@ function render_scene( scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image
 
         end
 
+        global REFLECT_LIMIT = 0
+        global REFRACT_LIMIT = 0
+
+
         return map( clamp01nan , convert(Array{RGBA, 2}, d_arr) )
 
     end
@@ -142,6 +148,9 @@ function render_scene( scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image
             img[ ( image_height - j ) + 1, i ] = RGBA( pixel_colour.r / samples, pixel_colour.g / samples, pixel_colour.b / samples, pixel_colour.alpha )
         end
     end
+
+    global REFLECT_LIMIT = 0
+    global REFRACT_LIMIT = 0
 
     return map( clamp01nan , img )
 
