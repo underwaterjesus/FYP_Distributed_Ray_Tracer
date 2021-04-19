@@ -70,7 +70,7 @@ function render_scene( scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image
         end
 
         fill!(img, RGBA(0.0,0.0,0.0,1.0))
-        d_arr = distribute(img)
+        d_arr = distribute( img , procs=worker_list )
         
         #@sync @async d_arr = distribute(img)
         @sync for id in worker_list
@@ -81,11 +81,12 @@ function render_scene( scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image
 
                         h_offset = localindices(d_arr)[2][1] + ( i - 1 )
                         v_offset = localindices(d_arr)[1][1] + ( j - 1 )
+                        v_offset = abs(v_offset - image_height) + 1
                         hrzt_factor = h_offset / ( image_width - 1 )
                         vert_factor = v_offset / ( image_height - 1 )
                         ray = Ray( scene.camera.origin, ( lower_left_corner + (hrzt_factor * horizontal) + (vert_factor * vertical) - scene.camera.origin ) )
                         pixel_colour = ray_cast(ray, scene)
-                        localpart(d_arr)[ ( size(localpart(d_arr))[1] - j ) + 1, i ] = RGBA( pixel_colour.r, pixel_colour.g, pixel_colour.b, pixel_colour.alpha )
+                        localpart(d_arr)[ j, i ] = RGBA( pixel_colour.r, pixel_colour.g, pixel_colour.b, pixel_colour.alpha )
 
                         continue
 
@@ -97,6 +98,7 @@ function render_scene( scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image
 
                         h_offset = localindices(d_arr)[2][1] + ( i - 1 )
                         v_offset = localindices(d_arr)[1][1] + ( j - 1 )
+                        v_offset = abs(v_offset - image_height) + 1
                         hrzt_factor = ( h_offset + rand(Float32) ) / ( image_width - 1 )
                         vert_factor = ( v_offset + rand(Float32) ) / ( image_height - 1 )
                         ray = Ray( scene.camera.origin, ( lower_left_corner + (hrzt_factor * horizontal) + (vert_factor * vertical) - scene.camera.origin ) )
@@ -104,7 +106,7 @@ function render_scene( scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image
 
                     end
 
-                    localpart(d_arr)[ ( size(localpart(d_arr))[1] - j ) + 1, i ] = RGBA( pixel_colour.r / samples, pixel_colour.g / samples, pixel_colour.b / samples, pixel_colour.alpha )
+                    localpart(d_arr)[ j, i ] = RGBA( pixel_colour.r / samples, pixel_colour.g / samples, pixel_colour.b / samples, pixel_colour.alpha )
 
                 end
             end
@@ -113,7 +115,6 @@ function render_scene( scene::Scene, image_width::Int=DEFAULT_IMAGE_WIDTH, image
 
         global REFLECT_LIMIT = 0
         global REFRACT_LIMIT = 0
-
 
         return map( clamp01nan , convert(Array{RGBA, 2}, d_arr) )
 
