@@ -15,5 +15,6 @@ export clear_shapes, clear_light, clear_camera, clear_boundary
 export append!, push!, shape_details, scene_details
 export make_scene, make_cuboid, make_sphere, make_camera
 export make_vector, make_light, make_texture, render_scene
+export up_vector
 
 end

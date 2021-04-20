@@ -97,6 +97,18 @@ function unit_vector(v::Vector_3D)
     return v / magnitude(v)
 end
 
+function ortho_vector_max_y(v::Vector_3D)
+
+    if v.y < eps(Float64)
+        return VERTICAL
+    end
+
+    λ = ( -(v.x ^ 2) - (v.z ^ 2)) / v.y
+    ortho_vector = unit_vector( Vector_3D(v.x, λ, v.z) )
+    return λ >= 0 ? ortho_vector : -ortho_vector
+
+end
+
 ## Reflect vector about another
 function reflect(v::Vector_3D, axis::Vector_3D)   
     n = unit_vector(axis)
@@ -251,4 +263,14 @@ function rotate_on_axis(point::Vector_3D, angle::Real, axis_id::Int)
         return Vector_3D(x_, y_, point.z)
     end
 
+end
+
+function rotate_on_vector(v::Vector_3D, axis::Vector_3D, angle::Real)
+    u = cross(v, axis) / magnitude(axis)
+    return unit_vector( cos( deg2rad(-angle) ) * v + sin( deg2rad(-angle) ) * u )
+end
+
+function up_vector(camera::Vector_3D, focus::Vector_3D, angle::Real=0.0)
+    v = ortho_vector_max_y( camera - focus )
+    return rotate_on_vector( v, ( camera - focus ), angle )
 end
