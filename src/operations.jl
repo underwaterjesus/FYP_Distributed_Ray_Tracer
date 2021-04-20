@@ -267,7 +267,8 @@ end
 
 function rotate_on_vector(v::Vector_3D, axis::Vector_3D, angle::Real)
     u = cross(v, axis) / magnitude(axis)
-    return unit_vector( cos( deg2rad(-angle) ) * v + sin( deg2rad(-angle) ) * u )
+    angle = -( angle % 360 )
+    return unit_vector( cos( deg2rad(angle) ) * v + sin( deg2rad(angle) ) * u )
 end
 
 function up_vector(camera::Vector_3D, focus::Vector_3D, angle::Real=0.0)
