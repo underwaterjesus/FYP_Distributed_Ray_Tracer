@@ -275,11 +275,6 @@ function make_cuboid( centre::Vector_3D, len::Real, wdh::Real, hgt::Real ;
             
         elseif map_mode == CUBE_MAP
 
-            #=# Slicing example: splt = arr[ 2:3 , 1:3 ]
-            edge_ac = magnitude(c - a)
-            edge_ab = magnitude(b - a)
-            edge_aw = magnitude(w_ - a)=#
-
             cube_map_height = 2 * len + hgt
             cube_map_width = 2 * len + 2 * wdh
 

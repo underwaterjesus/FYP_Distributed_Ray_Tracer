@@ -1,5 +1,11 @@
-include("../src/trace.jl")
-using .Trace
+using Distributed
+
+machines = [("ubuntu@3.249.197.51",1),("ubuntu@34.248.8.28",1),("ubuntu@34.240.33.89",1)]
+dir = "/home/ubuntu"
+addprocs( machines; dir=dir, topology=:master_worker, tunnel=true )
+
+@everywhere include("../src/trace.jl")
+@everywhere using .Trace
 using FileIO
 
 table_length = 22
@@ -51,8 +57,8 @@ bottom_right_block = make_cuboid(Vector_3D(6.5, 0.1666, -2.375), 0.75, 4, 1.333,
 
 light_position = Vector_3D(0, 7.5, -2.25)
 light = make_light(light_position, 0.9, 0.75)
-light2 = make_light(Vector_3D(5, 5, 6.5), 0.5, 0.25)
-light3 = make_light(Vector_3D(5, 5, 6.5), 0.85, 0.45)
+light_2 = make_light(Vector_3D(5, 5, 6.5), 0.5, 0.25)
+light_3 = make_light(Vector_3D(5, 5, 6.5), 0.85, 0.45)
 
 camera_1 = make_camera( Vector_3D(9.5, 7, 0.5), Vector_3D(0, 0, -2.5), VERTICAL )
 camera_2 = make_camera( Vector_3D(9.5, 7, 0.5), Vector_3D(0, 0, -2.5), Vector_3D(0.125, 1, 0) )
@@ -68,13 +74,21 @@ shapes = [ table, white_ball, yellow_ball, green_ball, brown_ball, blue_ball, pi
             red_ball_9, red_ball_10, red_ball_11, red_ball_12, red_ball_13, red_ball_14, red_ball_15,
             bottom_left_block, bottom_mid_block, bottom_right_block, top_mid_block #=top_left_block, top_right_block=# ]
 
-scene = make_scene( light=light3, camera=camera_1, shapes=shapes )
+scene = make_scene( light=light_3, camera=camera_1, shapes=shapes )
 
-#img1 = render_scene(camera_1, shapes, light, nothing)
-#img2 = render_scene(camera_2, shapes, light, nothing)
-#img3 = render_scene(camera_3, shapes, light, nothing)
-img4 = render_scene(scene, 3840, 2160, 60, 100)
-#save( File(format"PNG", "example_image_1.png"), img1 )
-#save( File(format"PNG", "example_image_2.png"), img2 )
-#save( File(format"PNG", "example_image_3.png"), img3 )
-save( File(format"PNG", "example_image_4.png"), img4 )
+img = render_scene(scene, 3840, 2160, 60, 100, worker_list=workers())
+save( File(format"PNG", "example_image.png"), img )
+
+#=
+
+set_camera(scene, camera_2)
+set_light(scene, light_2)
+img = render_scene(scene, 3840, 2160, 60, 100, worker_list=workers())
+save( File(format"PNG", "example_image_2.png"), img )
+
+set_camera(scene, camera_3)
+set_light(scene, light_3)
+img = render_scene(scene, 3840, 2160, 60, 100, worker_list=workers())
+save( File(format"PNG", "example_image_3.png"), img )
+
+=#
