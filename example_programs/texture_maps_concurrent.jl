@@ -32,5 +32,5 @@ camera = make_camera( Vector_3D(-1.5, 1.2, 1), Vector_3D(0, 0.75, 0.65), VERTICA
 shapes = [ table, globe, chest, dirt ]
 scene = make_scene( light=light, camera=camera, shapes=shapes )
 
-img = render_scene(scene, 3840, 2160, 60, 20, worker_list=workers())
+img = render_scene(scene, 1080, 720, 60, 20, worker_list=workers())
 save( File(format"PNG", "example_image.png"), img )

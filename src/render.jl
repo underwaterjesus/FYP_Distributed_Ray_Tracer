@@ -260,11 +260,11 @@ function refract_ray(ray::Ray, normal::Vector_3D, intersection_point::Vector_3D,
     cos_1 = dot( unit_vector(-ray.direction), normal )
     cos_1 = min( cos_1, 1.0 )
     cos_1 = max( cos_1, -1.0 )
-    sin_ = (refractive_ratio * refractive_ratio) * ( 1 - (cos_1 ^ 2) )
-    if sin_ > 1.0
+    sin_2 = (refractive_ratio * refractive_ratio) * ( 1 - (cos_1 ^ 2) )
+    if sin_2 > 1.0
         return ( nothing, cos_1 )
     else
-        cos_2 = √( 1.0 - sin_ )
+        cos_2 = √( 1.0 - sin_2 )
         direction = normal * ( refractive_ratio * cos_1 - cos_2 ) - unit_vector(-ray.direction) * refractive_ratio
         return ( Ray( intersection_point - ( normal * (10 * EPSILON) ), direction ), cos_1 )
     end

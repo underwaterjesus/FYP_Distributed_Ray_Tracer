@@ -51,6 +51,6 @@ shapes = [ table, white_ball, yellow_ball, green_ball, brown_ball, globe_ball, p
 
 scene = make_scene( light=light, camera=camera, shapes=shapes )
 
-img = render_scene(scene, 3840, 2160, 60, 10)
+img = render_scene(scene, 1080, 720, 60, 10)
 
 save( File(format"PNG", "example_image.png"), img )
