@@ -368,7 +368,7 @@ function colour_pixel(scene::Scene, ray::Ray, closest_intersection_value::Real, 
         diffuse_light = ( base_colour * scene.shapes[idx].diffuse * cos_light_ray_normal ) / distance
 
         reflect_ray = reflect(-light_ray, n)
-        cos_reflect_ray_cast_ray = dot( reflect_ray, -ray.direction )
+        cos_reflect_ray_cast_ray = dot( unit_vector(reflect_ray) , unit_vector(-ray.direction) )
 
         if cos_reflect_ray_cast_ray < 0
             specular_light = RGBA(0, 0, 0, 1.0)
