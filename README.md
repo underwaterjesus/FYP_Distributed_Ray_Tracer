@@ -30,3 +30,8 @@ Section 4.4.1 (p.33-36) details how to scale the size of the viewing plane to ma
 <p align="justify">
 On page 62, in Section 4.9, a mistake in the implementation of the <a href="https://en.wikipedia.org/wiki/Phong_reflection_model" title="Wikipedia - Phong reflection model">Phong Reflection Model</a> is mentioned. This mistake is in the version of the module that was submitted for grading. I was unable to rectify the error before the project deadline. However, the version of the project that is present in this repository has had this error rectified.
 </p>
+
+## Grade
+<p align="justify">
+The project is currently being graded. This section will be updated when a final grade has been received.
+</p>
