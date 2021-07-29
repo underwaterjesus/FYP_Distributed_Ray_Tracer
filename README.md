@@ -33,5 +33,5 @@ On page 62, in Section 4.9, a mistake in the implementation of the <a href="http
 
 ## Grade
 <p align="justify">
-The project is currently being graded. This section will be updated when a final grade has been received.
+The final grade received for the project and report was an <b>A1</b>, the highest possible.
 </p>
